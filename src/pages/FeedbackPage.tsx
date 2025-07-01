@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Lightbulb, ArrowRight, TrendingUp, Home, BookOpen } from "lucide-react";
+import { CheckCircle, XCircle, Lightbulb, ArrowRight, Home, BookOpen } from "lucide-react";
 
 const categoryNames: { [key: string]: string } = {
   mathematics: "수학",
@@ -11,8 +11,6 @@ const categoryNames: { [key: string]: string } = {
   history: "역사",
   economics: "경제",
   computer_science: "컴퓨터과학",
-  arts: "예술",
-  social_studies: "사회",
   language: "언어"
 };
 
@@ -45,8 +43,6 @@ const FeedbackPage = () => {
     ]
   };
 
-  const overallScore = 85;
-
   if (!teachingData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -70,7 +66,7 @@ const FeedbackPage = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-500 rounded-xl">
-                <TrendingUp className="w-8 h-8 text-white" />
+                <BookOpen className="w-8 h-8 text-white" />
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">교육 피드백</h1>
@@ -93,26 +89,18 @@ const FeedbackPage = () => {
 
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto space-y-6">
-          {/* Score Overview */}
+          {/* Overview */}
           <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-blue-200">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-2xl flex items-center gap-2">
-                    교육 성과 분석
-                    <Badge variant="secondary" className="ml-2">
-                      {categoryNames[teachingData.category]}
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription className="text-base mt-2">
-                    총 {teachingData.messages.filter((m: any) => m.type === 'teacher').length}번의 설명을 분석했습니다
-                  </CardDescription>
-                </div>
-                <div className="text-center">
-                  <div className="text-4xl font-bold text-blue-600 mb-1">{overallScore}점</div>
-                  <div className="text-sm text-gray-600">종합 점수</div>
-                </div>
-              </div>
+              <CardTitle className="text-2xl flex items-center gap-2">
+                교육 성과 분석
+                <Badge variant="secondary" className="ml-2">
+                  {categoryNames[teachingData.category]}
+                </Badge>
+              </CardTitle>
+              <CardDescription className="text-base mt-2">
+                총 {teachingData.messages.filter((m: any) => m.type === 'teacher').length}번의 설명을 분석했습니다
+              </CardDescription>
             </CardHeader>
           </Card>
 

@@ -1,5 +1,6 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calculator, Beaker, Clock, TrendingUp, Monitor, Palette, Globe, Book } from "lucide-react";
+import { Calculator, Beaker, Clock, TrendingUp, Monitor, Book } from "lucide-react";
 
 interface CategorySelectorProps {
   selectedCategory: string;
@@ -43,20 +44,6 @@ const categories = [
     color: "from-cyan-500 to-cyan-600"
   },
   {
-    id: "arts",
-    name: "예술",
-    description: "미술, 음악, 문학, 철학",
-    icon: Palette,
-    color: "from-pink-500 to-pink-600"
-  },
-  {
-    id: "social_studies",
-    name: "사회",
-    description: "정치, 사회학, 지리학",
-    icon: Globe,
-    color: "from-indigo-500 to-indigo-600"
-  },
-  {
     id: "language",
     name: "언어",
     description: "국어, 영어, 문법, 작문",
@@ -75,7 +62,7 @@ const CategorySelector = ({ selectedCategory, onCategorySelect }: CategorySelect
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {categories.map((category) => {
             const Icon = category.icon;
             const isSelected = selectedCategory === category.id;

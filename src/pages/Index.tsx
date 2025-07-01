@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Brain, Users, Lightbulb, User } from "lucide-react";
+import { Brain, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import CategorySelector from "@/components/CategorySelector";
 
@@ -53,26 +53,6 @@ const Index = () => {
             <p className="text-xl text-gray-600 mb-8">
               당신이 알고 있는 지식을 설명해주세요. AI가 정확한 피드백과 함께 다음 학습 단계를 제안해드립니다.
             </p>
-            
-            <div className="grid md:grid-cols-3 gap-6 mb-8">
-              <Card className="text-center p-6 hover:shadow-lg transition-shadow">
-                <BookOpen className="w-12 h-12 mx-auto mb-4 text-blue-500" />
-                <h3 className="font-semibold mb-2">설명하기</h3>
-                <p className="text-sm text-gray-600">본인의 지식을 자유롭게 설명해보세요</p>
-              </Card>
-              
-              <Card className="text-center p-6 hover:shadow-lg transition-shadow">
-                <Users className="w-12 h-12 mx-auto mb-4 text-green-500" />
-                <h3 className="font-semibold mb-2">피드백 받기</h3>
-                <p className="text-sm text-gray-600">AI가 상세한 분석과 피드백을 제공합니다</p>
-              </Card>
-              
-              <Card className="text-center p-6 hover:shadow-lg transition-shadow">
-                <Lightbulb className="w-12 h-12 mx-auto mb-4 text-yellow-500" />
-                <h3 className="font-semibold mb-2">성장하기</h3>
-                <p className="text-sm text-gray-600">다음 학습 단계로 발전해나가세요</p>
-              </Card>
-            </div>
           </div>
         </div>
 

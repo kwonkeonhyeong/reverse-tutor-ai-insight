@@ -14,9 +14,40 @@ const categoryNames: { [key: string]: string } = {
   history: "역사",
   economics: "경제",
   computer_science: "컴퓨터과학",
-  arts: "예술",
-  social_studies: "사회",
   language: "언어"
+};
+
+const categoryQuestions: { [key: string]: string[] } = {
+  mathematics: [
+    "미분과 적분의 관계를 좀 더 자세히 설명해주실 수 있나요?",
+    "이 공식을 실제 문제에 어떻게 적용할 수 있을까요?",
+    "혹시 이와 비슷한 다른 수학 개념이 있나요?"
+  ],
+  science: [
+    "이 현상이 일어나는 과학적 원리를 더 구체적으로 알려주세요",
+    "일상생활에서 볼 수 있는 비슷한 예가 있을까요?",
+    "이 실험 결과를 어떻게 해석해야 하나요?"
+  ],
+  history: [
+    "이 사건이 당시 사회에 미친 영향은 무엇인가요?",
+    "비슷한 시기의 다른 나라 상황과 비교하면 어떨까요?",
+    "현재 우리에게 주는 교훈은 무엇일까요?"
+  ],
+  economics: [
+    "이 경제 이론이 실제 시장에서는 어떻게 작동하나요?",
+    "현재 경제 상황에 이 개념을 적용하면 어떨까요?",
+    "다른 경제 지표와는 어떤 관계가 있나요?"
+  ],
+  computer_science: [
+    "이 알고리즘의 시간 복잡도는 어떻게 되나요?",
+    "실제 프로젝트에서 이 기술을 어떻게 활용할 수 있을까요?",
+    "다른 프로그래밍 언어에서는 어떻게 구현하나요?"
+  ],
+  language: [
+    "이 문법 규칙의 예외 상황은 언제인가요?",
+    "원어민들은 실제로 어떻게 사용하나요?",
+    "비슷한 의미의 다른 표현 방법이 있나요?"
+  ]
 };
 
 interface ChatMessage {
@@ -37,8 +68,6 @@ const TeachingPage = () => {
   const [studentMood, setStudentMood] = useState<'neutral' | 'thinking' | 'excited' | 'confused'>('neutral');
   const [isLoading, setIsLoading] = useState(false);
   const [questionCount, setQuestionCount] = useState(0);
-
-  const maxQuestions = 3;
 
   useEffect(() => {
     // Initial greeting
@@ -71,26 +100,16 @@ const TeachingPage = () => {
         generateStudentQuestion();
         setPhase('questions');
       } else if (phase === 'questions') {
-        if (questionCount < maxQuestions - 1) {
-          generateFollowUpQuestion();
-          setQuestionCount(prev => prev + 1);
-        } else {
-          finishTeaching();
-        }
+        generateFollowUpQuestion();
+        setQuestionCount(prev => prev + 1);
       }
       setIsLoading(false);
     }, 2000);
   };
 
   const generateStudentQuestion = () => {
-    const questions = [
-      "정말 흥미로운 설명이었어요! 그런데 실생활에서는 어떻게 활용할 수 있나요?",
-      "와! 이해가 되는 것 같아요. 그런데 반대의 경우는 어떻게 되나요?",
-      "설명해주신 내용이 다른 개념과는 어떤 관계가 있나요?",
-      "혹시 이 내용과 관련된 흥미로운 사례가 있을까요?"
-    ];
-
-    const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
+    const questions = categoryQuestions[category || 'mathematics'] || categoryQuestions.mathematics;
+    const randomQuestion = questions[0];
     setStudentMood('excited');
     
     setMessages(prev => [...prev, {
@@ -102,32 +121,15 @@ const TeachingPage = () => {
   };
 
   const generateFollowUpQuestion = () => {
-    const followUps = [
-      "아하! 그렇군요. 더 자세히 설명해주실 수 있나요?",
-      "이해했어요! 그런데 만약 다른 상황이라면 어떨까요?",
-      "정말 도움이 되었어요. 추가로 알아두면 좋을 점이 있나요?",
-      "좋은 설명이었어요! 마지막으로 궁금한 게 있는데요..."
-    ];
-
-    const randomFollowUp = followUps[Math.floor(Math.random() * followUps.length)];
+    const questions = categoryQuestions[category || 'mathematics'] || categoryQuestions.mathematics;
+    const questionIndex = Math.min(questionCount + 1, questions.length - 1);
+    const followUpQuestion = questions[questionIndex];
     setStudentMood('thinking');
     
     setMessages(prev => [...prev, {
       id: Date.now().toString(),
       type: 'student',
-      content: randomFollowUp,
-      timestamp: new Date()
-    }]);
-  };
-
-  const finishTeaching = () => {
-    setStudentMood('excited');
-    setPhase('completed');
-    
-    setMessages(prev => [...prev, {
-      id: Date.now().toString(),
-      type: 'student',
-      content: "정말 좋은 수업이었어요! 많이 배웠습니다. 감사합니다!",
+      content: followUpQuestion,
       timestamp: new Date()
     }]);
   };
@@ -178,23 +180,22 @@ const TeachingPage = () => {
               mood={studentMood}
             />
             
-            {phase === 'completed' && (
-              <Card className="bg-green-50 border-green-200">
-                <CardContent className="p-4 text-center">
-                  <BookOpen className="w-8 h-8 mx-auto mb-2 text-green-600" />
-                  <h3 className="font-semibold text-green-800 mb-2">수업 완료!</h3>
-                  <p className="text-sm text-green-700 mb-4">
-                    훌륭한 설명이었어요. 이제 피드백을 받아보세요!
-                  </p>
-                  <Button 
-                    onClick={handleFinishTeaching}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    피드백 받기
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="p-4 text-center">
+                <BookOpen className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+                <h3 className="font-semibold text-blue-800 mb-2">교육 진행 중</h3>
+                <p className="text-sm text-blue-700 mb-4">
+                  언제든지 교육을 종료할 수 있습니다
+                </p>
+                <Button 
+                  onClick={handleFinishTeaching}
+                  variant="outline"
+                  className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                >
+                  교육 종료하기
+                </Button>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Chat Interface */}
@@ -236,34 +237,29 @@ const TeachingPage = () => {
                   )}
                 </div>
 
-                {phase !== 'completed' && (
-                  <div className="space-y-3">
-                    <Textarea
-                      placeholder={
-                        phase === 'initial' 
-                          ? "학생에게 가르치고 싶은 내용을 설명해주세요..."
-                          : "학생의 질문에 답변해주세요..."
-                      }
-                      value={currentInput}
-                      onChange={(e) => setCurrentInput(e.target.value)}
-                      className="min-h-[100px]"
-                      disabled={isLoading}
-                    />
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-500">
-                        질문 {questionCount + 1}/{maxQuestions}
-                      </span>
-                      <Button
-                        onClick={handleSendMessage}
-                        disabled={!currentInput.trim() || isLoading}
-                        className="bg-blue-500 hover:bg-blue-600"
-                      >
-                        <Send className="w-4 h-4 mr-2" />
-                        {phase === 'initial' ? '가르치기' : '답변하기'}
-                      </Button>
-                    </div>
+                <div className="space-y-3">
+                  <Textarea
+                    placeholder={
+                      phase === 'initial' 
+                        ? "학생에게 가르치고 싶은 내용을 설명해주세요..."
+                        : "학생의 질문에 답변해주세요..."
+                    }
+                    value={currentInput}
+                    onChange={(e) => setCurrentInput(e.target.value)}
+                    className="min-h-[100px]"
+                    disabled={isLoading}
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleSendMessage}
+                      disabled={!currentInput.trim() || isLoading}
+                      className="bg-blue-500 hover:bg-blue-600"
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      {phase === 'initial' ? '가르치기' : '답변하기'}
+                    </Button>
                   </div>
-                )}
+                </div>
               </CardContent>
             </Card>
           </div>

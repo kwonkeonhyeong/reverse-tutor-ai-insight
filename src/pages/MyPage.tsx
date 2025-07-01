@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Home, Calendar, BookOpen, TrendingUp, MessageCircle } from "lucide-react";
+import { User, Home, Calendar, BookOpen, MessageCircle, Eye } from "lucide-react";
 
 const categoryNames: { [key: string]: string } = {
   mathematics: "수학",
@@ -13,8 +13,6 @@ const categoryNames: { [key: string]: string } = {
   history: "역사",
   economics: "경제",
   computer_science: "컴퓨터과학",
-  arts: "예술",
-  social_studies: "사회",
   language: "언어"
 };
 
@@ -48,13 +46,15 @@ const MyPage = () => {
     return {
       category,
       name: categoryNames[category],
-      count: sessions.length,
-      avgScore: sessions.length > 0 ? Math.floor(Math.random() * 20) + 80 : 0 // Mock score
+      count: sessions.length
     };
   }).filter(stat => stat.count > 0);
 
   const totalSessions = teachingSessions.length;
-  const averageScore = totalSessions > 0 ? Math.floor(categoryStats.reduce((sum, stat) => sum + stat.avgScore, 0) / categoryStats.length) : 0;
+
+  const handleViewFeedback = (session: TeachingSession) => {
+    navigate('/feedback', { state: { teachingData: session } });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
@@ -82,20 +82,12 @@ const MyPage = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto space-y-8">
           {/* Overview Statistics */}
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 gap-6">
             <Card>
               <CardContent className="p-6 text-center">
                 <BookOpen className="w-12 h-12 mx-auto mb-4 text-blue-500" />
                 <div className="text-2xl font-bold text-gray-900 mb-2">{totalSessions}</div>
                 <div className="text-gray-600">총 교육 세션</div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-6 text-center">
-                <TrendingUp className="w-12 h-12 mx-auto mb-4 text-green-500" />
-                <div className="text-2xl font-bold text-gray-900 mb-2">{averageScore}점</div>
-                <div className="text-gray-600">평균 점수</div>
               </CardContent>
             </Card>
             
@@ -112,7 +104,7 @@ const MyPage = () => {
           {categoryStats.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>분야별 성과</CardTitle>
+                <CardTitle>분야별 교육 현황</CardTitle>
                 <CardDescription>각 학습 분야에서의 교육 활동 현황입니다</CardDescription>
               </CardHeader>
               <CardContent>
@@ -121,10 +113,10 @@ const MyPage = () => {
                     <div key={stat.category} className="p-4 border rounded-lg hover:shadow-md transition-shadow">
                       <div className="flex items-center justify-between mb-2">
                         <Badge variant="secondary">{stat.name}</Badge>
-                        <span className="text-lg font-semibold text-blue-600">{stat.avgScore}점</span>
+                        <span className="text-lg font-semibold text-blue-600">{stat.count}회</span>
                       </div>
                       <div className="text-sm text-gray-600">
-                        {stat.count}회 교육 완료
+                        교육 완료
                       </div>
                     </div>
                   ))}
@@ -141,7 +133,7 @@ const MyPage = () => {
             </CardHeader>
             <CardContent>
               <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
-                <TabsList className="grid w-full grid-cols-4 lg:grid-cols-9">
+                <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7">
                   <TabsTrigger value="all">전체</TabsTrigger>
                   {Object.entries(categoryNames).map(([key, name]) => (
                     <TabsTrigger key={key} value={key} className="text-xs">
@@ -179,9 +171,20 @@ const MyPage = () => {
                                   {session.timestamp.toLocaleDateString()}
                                 </div>
                               </div>
-                              <Badge variant={session.completed ? "default" : "secondary"}>
-                                {session.completed ? "완료" : "진행중"}
-                              </Badge>
+                              <div className="flex gap-2">
+                                <Badge variant={session.completed ? "default" : "secondary"}>
+                                  {session.completed ? "완료" : "진행중"}
+                                </Badge>
+                                <Button
+                                  onClick={() => handleViewFeedback(session)}
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex items-center gap-1"
+                                >
+                                  <Eye className="w-3 h-3" />
+                                  피드백 보기
+                                </Button>
+                              </div>
                             </div>
                             
                             <div className="grid md:grid-cols-2 gap-4 text-sm">
