@@ -1,6 +1,5 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calculator, Flask, Clock, TrendingUp, Monitor, Palette, Globe, Book } from "lucide-react";
+import { Calculator, Beaker, Clock, TrendingUp, Monitor, Palette, Globe, Book } from "lucide-react";
 
 interface CategorySelectorProps {
   selectedCategory: string;
@@ -19,7 +18,7 @@ const categories = [
     id: "science",
     name: "과학",
     description: "물리, 화학, 생물학, 지구과학",
-    icon: Flask,
+    icon: Beaker,
     color: "from-green-500 to-green-600"
   },
   {
