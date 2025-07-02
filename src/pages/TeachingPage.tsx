@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Send, BookOpen, Bot, AlertCircle } from "lucide-react";
+import { ArrowLeft, Send, BookOpen, Bot, AlertCircle, Mic, MicOff } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import StudentAnimation from "@/components/StudentAnimation";
 
@@ -72,6 +72,8 @@ const TeachingPage = () => {
   const [aiFeedback, setAiFeedback] = useState<string>('');
   const [isGettingFeedback, setIsGettingFeedback] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState<string>('');
+  const [isListening, setIsListening] = useState(false);
+  const [recognition, setRecognition] = useState<any>(null);
 
   useEffect(() => {
     // Initial greeting
@@ -85,6 +87,36 @@ const TeachingPage = () => {
     // Load Gemini API key
     const savedApiKey = localStorage.getItem('geminiApiKey') || '';
     setGeminiApiKey(savedApiKey);
+
+    // Initialize Speech Recognition
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognitionInstance = new SpeechRecognition();
+      recognitionInstance.continuous = false;
+      recognitionInstance.interimResults = false;
+      recognitionInstance.lang = 'ko-KR';
+      
+      recognitionInstance.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setCurrentInput(transcript);
+        setIsListening(false);
+      };
+      
+      recognitionInstance.onerror = () => {
+        setIsListening(false);
+        toast({
+          title: "음성 인식 오류",
+          description: "음성 인식에 실패했습니다. 다시 시도해주세요.",
+          variant: "destructive"
+        });
+      };
+      
+      recognitionInstance.onend = () => {
+        setIsListening(false);
+      };
+      
+      setRecognition(recognitionInstance);
+    }
   }, [category]);
 
   // Real-time AI feedback when user types
@@ -106,7 +138,7 @@ const TeachingPage = () => {
     
     setIsGettingFeedback(true);
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -127,9 +159,13 @@ const TeachingPage = () => {
         const data = await response.json();
         const feedback = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
         setAiFeedback(feedback);
+      } else {
+        console.error('Gemini API 응답 오류:', response.status);
+        setAiFeedback('피드백을 가져올 수 없습니다.');
       }
     } catch (error) {
       console.error('Gemini API 오류:', error);
+      setAiFeedback('피드백을 가져올 수 없습니다.');
     } finally {
       setIsGettingFeedback(false);
     }
@@ -163,31 +199,132 @@ const TeachingPage = () => {
     }, 2000);
   };
 
-  const generateStudentQuestion = () => {
-    const questions = categoryQuestions[category || 'mathematics'] || categoryQuestions.mathematics;
-    const randomQuestion = questions[0];
-    setStudentMood('excited');
-    
-    setMessages(prev => [...prev, {
-      id: Date.now().toString(),
-      type: 'student',
-      content: randomQuestion,
-      timestamp: new Date()
-    }]);
+  const generateStudentQuestion = async () => {
+    if (!geminiApiKey) {
+      // Fallback to predefined questions if no API key
+      const questions = categoryQuestions[category || 'mathematics'] || categoryQuestions.mathematics;
+      const randomQuestion = questions[0];
+      setStudentMood('excited');
+      
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        type: 'student',
+        content: randomQuestion,
+        timestamp: new Date()
+      }]);
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `당신은 ${categoryNames[category || '']} 분야의 호기심 많은 학생입니다. 방금 선생님이 설명해준 내용에 대해 자연스럽고 구체적인 질문을 하나 만들어주세요. 질문은 50자 이내로 간단명료하게 해주세요.
+              
+              선생님의 설명: "${messages[messages.length - 1]?.content || ''}"`
+            }]
+          }]
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const question = data.candidates?.[0]?.content?.parts?.[0]?.text || categoryQuestions[category || 'mathematics'][0];
+        setStudentMood('excited');
+        
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          type: 'student',
+          content: question,
+          timestamp: new Date()
+        }]);
+      } else {
+        throw new Error('API 응답 실패');
+      }
+    } catch (error) {
+      console.error('Gemini API 오류:', error);
+      // Fallback to predefined questions
+      const questions = categoryQuestions[category || 'mathematics'] || categoryQuestions.mathematics;
+      const randomQuestion = questions[0];
+      setStudentMood('excited');
+      
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        type: 'student',
+        content: randomQuestion,
+        timestamp: new Date()
+      }]);
+    }
   };
 
-  const generateFollowUpQuestion = () => {
-    const questions = categoryQuestions[category || 'mathematics'] || categoryQuestions.mathematics;
-    const questionIndex = Math.min(questionCount + 1, questions.length - 1);
-    const followUpQuestion = questions[questionIndex];
-    setStudentMood('thinking');
-    
-    setMessages(prev => [...prev, {
-      id: Date.now().toString(),
-      type: 'student',
-      content: followUpQuestion,
-      timestamp: new Date()
-    }]);
+  const generateFollowUpQuestion = async () => {
+    if (!geminiApiKey) {
+      // Fallback to predefined questions if no API key
+      const questions = categoryQuestions[category || 'mathematics'] || categoryQuestions.mathematics;
+      const questionIndex = Math.min(questionCount + 1, questions.length - 1);
+      const followUpQuestion = questions[questionIndex];
+      setStudentMood('thinking');
+      
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        type: 'student',
+        content: followUpQuestion,
+        timestamp: new Date()
+      }]);
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `당신은 ${categoryNames[category || '']} 분야의 학생입니다. 선생님과의 대화를 바탕으로 후속 질문을 하나 만들어주세요. 이전 질문과는 다른 관점에서 50자 이내로 자연스럽게 질문해주세요.
+              
+              대화 내용: ${messages.slice(-2).map(m => `${m.type === 'teacher' ? '선생님' : '학생'}: ${m.content}`).join('\n')}`
+            }]
+          }]
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const question = data.candidates?.[0]?.content?.parts?.[0]?.text || categoryQuestions[category || 'mathematics'][Math.min(questionCount + 1, categoryQuestions[category || 'mathematics'].length - 1)];
+        setStudentMood('thinking');
+        
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          type: 'student',
+          content: question,
+          timestamp: new Date()
+        }]);
+      } else {
+        throw new Error('API 응답 실패');
+      }
+    } catch (error) {
+      console.error('Gemini API 오류:', error);
+      // Fallback to predefined questions
+      const questions = categoryQuestions[category || 'mathematics'] || categoryQuestions.mathematics;
+      const questionIndex = Math.min(questionCount + 1, questions.length - 1);
+      const followUpQuestion = questions[questionIndex];
+      setStudentMood('thinking');
+      
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        type: 'student',
+        content: followUpQuestion,
+        timestamp: new Date()
+      }]);
+    }
   };
 
   const handleFinishTeaching = () => {
@@ -344,17 +481,38 @@ const TeachingPage = () => {
                 </div>
 
                 <div className="space-y-3">
-                  <Textarea
-                    placeholder={
-                      phase === 'initial' 
-                        ? "학생에게 가르치고 싶은 내용을 설명해주세요..."
-                        : "학생의 질문에 답변해주세요..."
-                    }
-                    value={currentInput}
-                    onChange={(e) => setCurrentInput(e.target.value)}
-                    className="min-h-[100px]"
-                    disabled={isLoading}
-                  />
+                  <div className="relative">
+                    <Textarea
+                      placeholder={
+                        phase === 'initial' 
+                          ? "학생에게 가르치고 싶은 내용을 설명해주세요..."
+                          : "학생의 질문에 답변해주세요..."
+                      }
+                      value={currentInput}
+                      onChange={(e) => setCurrentInput(e.target.value)}
+                      className="min-h-[100px] pr-12"
+                      disabled={isLoading}
+                    />
+                    {recognition && (
+                      <Button
+                        onClick={() => {
+                          if (isListening) {
+                            recognition.stop();
+                            setIsListening(false);
+                          } else {
+                            recognition.start();
+                            setIsListening(true);
+                          }
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className={`absolute top-2 right-2 ${isListening ? 'text-red-500' : 'text-gray-500'}`}
+                        disabled={isLoading}
+                      >
+                        {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                      </Button>
+                    )}
+                  </div>
                   <div className="flex justify-end">
                     <Button
                       onClick={handleSendMessage}

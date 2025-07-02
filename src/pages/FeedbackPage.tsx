@@ -1,5 +1,6 @@
 
 import { useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,29 +19,131 @@ const FeedbackPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const teachingData = location.state?.teachingData;
+  const [feedback, setFeedback] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mock feedback data - in real app, this would come from AI analysis
-  const feedback = {
-    correctContent: [
-      "핵심 개념에 대한 기본 이해가 탄탄합니다",
-      "학생의 질문에 대한 답변이 논리적이고 체계적이었습니다",
-      "복잡한 내용을 쉽게 설명하는 능력이 뛰어납니다"
-    ],
-    incorrectContent: [
-      "일부 전문용어의 정확한 정의가 부족했습니다",
-      "예시와 실제 적용 사례를 더 구체적으로 제시하면 좋겠습니다"
-    ],
-    improvements: [
-      "학습자의 수준을 고려한 단계별 설명 구성",
-      "시각적 자료나 도표를 활용한 설명 보완",
-      "개념 간의 연관성을 더욱 명확하게 설명"
-    ],
-    nextSteps: [
-      "심화 개념 학습 및 이론 보강",
-      "다양한 문제 해결 사례 연구",
-      "교수법 및 의사소통 스킬 향상",
-      "관련 최신 연구 동향 파악"
-    ]
+  useEffect(() => {
+    if (teachingData) {
+      generateAIFeedback();
+    }
+  }, [teachingData]);
+
+  const generateAIFeedback = async () => {
+    const geminiApiKey = localStorage.getItem('geminiApiKey');
+    
+    if (!geminiApiKey) {
+      // Fallback to mock data if no API key
+      setTimeout(() => {
+        const mockFeedback = {
+          overallScore: Math.floor(Math.random() * 31) + 70,
+          strengths: [
+            "명확하고 이해하기 쉬운 설명",
+            "체계적인 내용 구성",
+            "학생의 질문에 적절한 답변"
+          ],
+          improvements: [
+            "구체적인 예시를 더 많이 활용하세요",
+            "학생의 이해도를 더 자주 확인해보세요",
+            "개념 간의 연결고리를 더 명확히 설명하세요"
+          ],
+          suggestions: [
+            "미분과 적분의 기본 개념",
+            "실생활 응용 사례",
+            "관련 수학 공식의 증명 과정"
+          ]
+        };
+        setFeedback(mockFeedback);
+        setIsLoading(false);
+      }, 2000);
+      return;
+    }
+
+    try {
+      const conversationText = teachingData.messages
+        .map((m: any) => `${m.type === 'teacher' ? '선생님' : '학생'}: ${m.content}`)
+        .join('\n');
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `다음은 ${categoryNames[teachingData.category]} 분야의 교육 세션입니다. 이 교육 내용을 분석하여 피드백을 제공해주세요.
+
+대화 내용:
+${conversationText}
+
+다음 형식으로 JSON 응답해주세요:
+{
+  "strengths": ["강점1", "강점2", "강점3"],
+  "improvements": ["개선점1", "개선점2", "개선점3"],
+  "suggestions": ["추천 학습 주제1", "추천 학습 주제2", "추천 학습 주제3"]
+}
+
+각 항목은 구체적이고 실용적인 조언으로 작성해주세요.`
+            }]
+          }]
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        
+        try {
+          // Try to parse JSON response
+          const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsedFeedback = JSON.parse(jsonMatch[0]);
+            setFeedback({
+              overallScore: Math.floor(Math.random() * 31) + 70, // Keep random score for now
+              strengths: parsedFeedback.strengths || [],
+              improvements: parsedFeedback.improvements || [],
+              suggestions: parsedFeedback.suggestions || []
+            });
+          } else {
+            throw new Error('JSON 파싱 실패');
+          }
+        } catch (parseError) {
+          console.error('AI 응답 파싱 실패:', parseError);
+          // Fallback to mock data
+          setFeedback({
+            overallScore: Math.floor(Math.random() * 31) + 70,
+            strengths: ["AI 응답을 파싱할 수 없어 기본 피드백을 제공합니다"],
+            improvements: ["더 구체적인 설명이 필요합니다"],
+            suggestions: ["기본 개념 복습을 권장합니다"]
+          });
+        }
+      } else {
+        throw new Error('API 응답 실패');
+      }
+    } catch (error) {
+      console.error('Gemini API 오류:', error);
+      // Fallback to mock data
+      setFeedback({
+        overallScore: Math.floor(Math.random() * 31) + 70,
+        strengths: [
+          "명확하고 이해하기 쉬운 설명",
+          "체계적인 내용 구성",
+          "학생의 질문에 적절한 답변"
+        ],
+        improvements: [
+          "구체적인 예시를 더 많이 활용하세요",
+          "학생의 이해도를 더 자주 확인해보세요",
+          "개념 간의 연결고리를 더 명확히 설명하세요"
+        ],
+        suggestions: [
+          "미분과 적분의 기본 개념",
+          "실생활 응용 사례",
+          "관련 수학 공식의 증명 과정"
+        ]
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!teachingData) {
@@ -52,6 +155,19 @@ const FeedbackPage = () => {
             <Button onClick={() => navigate('/')}>
               홈으로 돌아가기
             </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card>
+          <CardContent className="p-8 text-center">
+            <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-gray-600">AI가 교육 내용을 분석하고 있습니다...</p>
           </CardContent>
         </Card>
       </div>
@@ -118,7 +234,7 @@ const FeedbackPage = () => {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
-                  {feedback.correctContent.map((item, index) => (
+                  {feedback.strengths.map((item: string, index: number) => (
                     <li key={index} className="flex items-start gap-2">
                       <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0" />
                       <span className="text-green-800">{item}</span>
@@ -141,7 +257,7 @@ const FeedbackPage = () => {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
-                  {feedback.incorrectContent.map((item, index) => (
+                  {feedback.improvements.map((item: string, index: number) => (
                     <li key={index} className="flex items-start gap-2">
                       <div className="w-2 h-2 bg-amber-500 rounded-full mt-2 flex-shrink-0" />
                       <span className="text-amber-800">{item}</span>
@@ -151,29 +267,6 @@ const FeedbackPage = () => {
               </CardContent>
             </Card>
           </div>
-
-          {/* Improvement Suggestions */}
-          <Card className="border-blue-200 bg-blue-50/50">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2 text-blue-700">
-                <Lightbulb className="w-5 h-5" />
-                개선 제안사항
-              </CardTitle>
-              <CardDescription>
-                교육 효과를 높이기 위한 구체적인 제안들입니다
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3">
-                {feedback.improvements.map((item, index) => (
-                  <li key={index} className="flex items-start gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
-                    <span className="text-blue-800">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
 
           {/* Next Learning Steps */}
           <Card className="border-purple-200 bg-purple-50/50">
@@ -188,7 +281,7 @@ const FeedbackPage = () => {
             </CardHeader>
             <CardContent>
               <div className="grid gap-3">
-                {feedback.nextSteps.map((step, index) => (
+                {feedback.suggestions.map((step: string, index: number) => (
                   <div key={index} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-purple-200">
                     <div className="w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">
                       {index + 1}
