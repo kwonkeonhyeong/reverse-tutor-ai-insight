@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Send, BookOpen } from "lucide-react";
+import { ArrowLeft, Send, BookOpen, Bot, AlertCircle } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import StudentAnimation from "@/components/StudentAnimation";
 
 const categoryNames: { [key: string]: string } = {
@@ -68,6 +69,9 @@ const TeachingPage = () => {
   const [studentMood, setStudentMood] = useState<'neutral' | 'thinking' | 'excited' | 'confused'>('neutral');
   const [isLoading, setIsLoading] = useState(false);
   const [questionCount, setQuestionCount] = useState(0);
+  const [aiFeedback, setAiFeedback] = useState<string>('');
+  const [isGettingFeedback, setIsGettingFeedback] = useState(false);
+  const [geminiApiKey, setGeminiApiKey] = useState<string>('');
 
   useEffect(() => {
     // Initial greeting
@@ -77,7 +81,59 @@ const TeachingPage = () => {
       content: `안녕하세요! ${categoryNames[category || '']} 수업을 듣게 되어 기뻐요. 어떤 내용을 가르쳐주실 건가요?`,
       timestamp: new Date()
     }]);
+    
+    // Load Gemini API key
+    const savedApiKey = localStorage.getItem('geminiApiKey') || '';
+    setGeminiApiKey(savedApiKey);
   }, [category]);
+
+  // Real-time AI feedback when user types
+  useEffect(() => {
+    if (!geminiApiKey || !currentInput.trim() || currentInput.length < 20) {
+      setAiFeedback('');
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      getAiFeedback(currentInput);
+    }, 1000); // Debounce for 1 second
+
+    return () => clearTimeout(timeoutId);
+  }, [currentInput, geminiApiKey]);
+
+  const getAiFeedback = async (content: string) => {
+    if (!geminiApiKey) return;
+    
+    setIsGettingFeedback(true);
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `다음 ${categoryNames[category || '']} 교육 내용에 대해 간단한 피드백을 주세요. 
+              내용이 정확한지, 더 설명이 필요한 부분은 없는지, 개선점이 있다면 무엇인지 50자 이내로 간략하게 알려주세요:
+              
+              "${content}"`
+            }]
+          }]
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const feedback = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        setAiFeedback(feedback);
+      }
+    } catch (error) {
+      console.error('Gemini API 오류:', error);
+    } finally {
+      setIsGettingFeedback(false);
+    }
+  };
 
   const handleSendMessage = async () => {
     if (!currentInput.trim()) return;
@@ -172,7 +228,7 @@ const TeachingPage = () => {
       </div>
 
       <div className="container mx-auto px-4 py-6">
-        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-8">
+        <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-6">
           {/* Student Animation */}
           <div className="space-y-4">
             <StudentAnimation 
@@ -194,6 +250,56 @@ const TeachingPage = () => {
                 >
                   교육 종료하기
                 </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* AI Feedback Panel */}
+          <div className="space-y-4">
+            <Card className="bg-purple-50 border-purple-200">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Bot className="w-5 h-5 text-purple-600" />
+                  실시간 AI 피드백
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {!geminiApiKey ? (
+                  <div className="text-center py-6">
+                    <AlertCircle className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                    <p className="text-sm text-gray-600 mb-3">
+                      AI 피드백을 받으려면 마이페이지에서 Gemini API 키를 설정해주세요
+                    </p>
+                    <Button 
+                      onClick={() => navigate('/mypage')}
+                      variant="outline"
+                      size="sm"
+                    >
+                      설정하러 가기
+                    </Button>
+                  </div>
+                ) : isGettingFeedback ? (
+                  <div className="text-center py-6">
+                    <div className="animate-spin w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full mx-auto mb-3"></div>
+                    <p className="text-sm text-gray-600">AI가 분석 중입니다...</p>
+                  </div>
+                ) : aiFeedback ? (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-white rounded-lg border border-purple-200">
+                      <p className="text-sm text-gray-700">{aiFeedback}</p>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      * 입력하신 내용을 바탕으로 실시간 피드백을 제공합니다
+                    </p>
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <Bot className="w-12 h-12 mx-auto mb-3 text-purple-400" />
+                    <p className="text-sm text-gray-600">
+                      교육 내용을 입력하시면 실시간 피드백을 받을 수 있습니다
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

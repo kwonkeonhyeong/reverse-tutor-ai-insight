@@ -5,7 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Home, Calendar, BookOpen, MessageCircle, Eye } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
+import { User, Home, Calendar, BookOpen, MessageCircle, Eye, Settings, Key } from "lucide-react";
 
 const categoryNames: { [key: string]: string } = {
   mathematics: "수학",
@@ -27,6 +30,8 @@ const MyPage = () => {
   const navigate = useNavigate();
   const [teachingSessions, setTeachingSessions] = useState<TeachingSession[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [geminiApiKey, setGeminiApiKey] = useState<string>('');
+  const [showApiKeySection, setShowApiKeySection] = useState<boolean>(false);
 
   useEffect(() => {
     // Load teaching sessions from localStorage
@@ -35,6 +40,10 @@ const MyPage = () => {
       ...session,
       timestamp: new Date(session.timestamp)
     })));
+    
+    // Load Gemini API key from localStorage
+    const savedApiKey = localStorage.getItem('geminiApiKey') || '';
+    setGeminiApiKey(savedApiKey);
   }, []);
 
   const filteredSessions = selectedCategory === 'all' 
@@ -54,6 +63,24 @@ const MyPage = () => {
 
   const handleViewFeedback = (session: TeachingSession) => {
     navigate('/feedback', { state: { teachingData: session } });
+  };
+
+  const handleSaveApiKey = () => {
+    if (!geminiApiKey.trim()) {
+      toast({
+        title: "오류",
+        description: "API 키를 입력해주세요.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    localStorage.setItem('geminiApiKey', geminiApiKey);
+    toast({
+      title: "성공",
+      description: "Gemini API 키가 저장되었습니다."
+    });
+    setShowApiKeySection(false);
   };
 
   return (
@@ -99,6 +126,60 @@ const MyPage = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* Gemini API Settings */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="w-5 h-5" />
+                    AI 설정
+                  </CardTitle>
+                  <CardDescription>Gemini AI를 사용하여 실시간 교육 피드백을 받아보세요</CardDescription>
+                </div>
+                <Button 
+                  onClick={() => setShowApiKeySection(!showApiKeySection)}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Key className="w-4 h-4 mr-2" />
+                  {geminiApiKey ? 'API 키 수정' : 'API 키 설정'}
+                </Button>
+              </div>
+            </CardHeader>
+            {showApiKeySection && (
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="apikey">Gemini API Key</Label>
+                    <Input
+                      id="apikey"
+                      type="password"
+                      placeholder="Google AI Studio에서 발급받은 API 키를 입력하세요"
+                      value={geminiApiKey}
+                      onChange={(e) => setGeminiApiKey(e.target.value)}
+                    />
+                    <p className="text-sm text-gray-500">
+                      API 키는 <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Google AI Studio</a>에서 무료로 발급받을 수 있습니다.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={handleSaveApiKey}>저장</Button>
+                    <Button variant="outline" onClick={() => setShowApiKeySection(false)}>취소</Button>
+                  </div>
+                </div>
+              </CardContent>
+            )}
+            {geminiApiKey && !showApiKeySection && (
+              <CardContent>
+                <div className="flex items-center gap-2 text-green-600">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm">Gemini AI가 연결되었습니다</span>
+                </div>
+              </CardContent>
+            )}
+          </Card>
 
           {/* Category Performance */}
           {categoryStats.length > 0 && (
