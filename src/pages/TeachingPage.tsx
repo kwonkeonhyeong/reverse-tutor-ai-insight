@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -119,53 +118,79 @@ const TeachingPage = () => {
     }
   }, [category]);
 
-  // Real-time AI feedback when user types
   useEffect(() => {
     if (!geminiApiKey || !currentInput.trim() || currentInput.length < 20) {
       setAiFeedback('');
       return;
     }
-
     const timeoutId = setTimeout(() => {
       getAiFeedback(currentInput);
-    }, 1000); // Debounce for 1 second
-
+    }, 1000); // 1초 디바운스
     return () => clearTimeout(timeoutId);
   }, [currentInput, geminiApiKey]);
 
   const getAiFeedback = async (content: string) => {
     if (!geminiApiKey) return;
-    
     setIsGettingFeedback(true);
     try {
+      const prompt = `아래의 설명에 대해 논리적, 사실적 오류가 있다면 지적해주고, 개선점을 50자 이내로 알려주세요.\n설명: "${content}"`;
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `다음 ${categoryNames[category || '']} 교육 내용에 대해 간단한 피드백을 주세요. 
-              내용이 정확한지, 더 설명이 필요한 부분은 없는지, 개선점이 있다면 무엇인지 50자 이내로 간략하게 알려주세요:
-              
-              "${content}"`
-            }]
-          }]
+          contents: [{ parts: [{ text: prompt }] }]
         })
       });
-
       if (response.ok) {
         const data = await response.json();
         const feedback = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
         setAiFeedback(feedback);
       } else {
-        console.error('Gemini API 응답 오류:', response.status);
         setAiFeedback('피드백을 가져올 수 없습니다.');
       }
     } catch (error) {
-      console.error('Gemini API 오류:', error);
       setAiFeedback('피드백을 가져올 수 없습니다.');
+    } finally {
+      setIsGettingFeedback(false);
+    }
+  };
+
+  const getStudentQuestion = async (content: string) => {
+    if (!geminiApiKey) return;
+    setIsGettingFeedback(true);
+    try {
+      const prompt = `아래는 선생님의 설명입니다. 설명을 들은 학생이 실제로 말하는 것처럼 자연스럽고 친근하게 반응해 주고, 이어서 학생이 정말 궁금한 핵심 질문 한 가지만 해 주세요.\n\n설명: "${content}"`;
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          type: 'student',
+          content: answer,
+          timestamp: new Date()
+        }]);
+      } else {
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          type: 'student',
+          content: '질문을 생성할 수 없습니다.',
+          timestamp: new Date()
+        }]);
+      }
+    } catch (error) {
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        type: 'student',
+        content: '질문을 생성할 수 없습니다.',
+        timestamp: new Date()
+      }]);
     } finally {
       setIsGettingFeedback(false);
     }
@@ -186,145 +211,10 @@ const TeachingPage = () => {
     setIsLoading(true);
     setStudentMood('thinking');
 
-    // Simulate AI response
-    setTimeout(() => {
-      if (phase === 'initial' || phase === 'teaching') {
-        generateStudentQuestion();
-        setPhase('questions');
-      } else if (phase === 'questions') {
-        generateFollowUpQuestion();
-        setQuestionCount(prev => prev + 1);
-      }
-      setIsLoading(false);
-    }, 2000);
-  };
+    // Gemini에 학생 질문 생성 요청
+    await getStudentQuestion(newMessage.content);
 
-  const generateStudentQuestion = async () => {
-    if (!geminiApiKey) {
-      // Fallback to predefined questions if no API key
-      const questions = categoryQuestions[category || 'mathematics'] || categoryQuestions.mathematics;
-      const randomQuestion = questions[0];
-      setStudentMood('excited');
-      
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        type: 'student',
-        content: randomQuestion,
-        timestamp: new Date()
-      }]);
-      return;
-    }
-
-    try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `당신은 ${categoryNames[category || '']} 분야의 호기심 많은 학생입니다. 방금 선생님이 설명해준 내용에 대해 자연스럽고 구체적인 질문을 하나 만들어주세요. 질문은 50자 이내로 간단명료하게 해주세요.
-              
-              선생님의 설명: "${messages[messages.length - 1]?.content || ''}"`
-            }]
-          }]
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const question = data.candidates?.[0]?.content?.parts?.[0]?.text || categoryQuestions[category || 'mathematics'][0];
-        setStudentMood('excited');
-        
-        setMessages(prev => [...prev, {
-          id: Date.now().toString(),
-          type: 'student',
-          content: question,
-          timestamp: new Date()
-        }]);
-      } else {
-        throw new Error('API 응답 실패');
-      }
-    } catch (error) {
-      console.error('Gemini API 오류:', error);
-      // Fallback to predefined questions
-      const questions = categoryQuestions[category || 'mathematics'] || categoryQuestions.mathematics;
-      const randomQuestion = questions[0];
-      setStudentMood('excited');
-      
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        type: 'student',
-        content: randomQuestion,
-        timestamp: new Date()
-      }]);
-    }
-  };
-
-  const generateFollowUpQuestion = async () => {
-    if (!geminiApiKey) {
-      // Fallback to predefined questions if no API key
-      const questions = categoryQuestions[category || 'mathematics'] || categoryQuestions.mathematics;
-      const questionIndex = Math.min(questionCount + 1, questions.length - 1);
-      const followUpQuestion = questions[questionIndex];
-      setStudentMood('thinking');
-      
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        type: 'student',
-        content: followUpQuestion,
-        timestamp: new Date()
-      }]);
-      return;
-    }
-
-    try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `당신은 ${categoryNames[category || '']} 분야의 학생입니다. 선생님과의 대화를 바탕으로 후속 질문을 하나 만들어주세요. 이전 질문과는 다른 관점에서 50자 이내로 자연스럽게 질문해주세요.
-              
-              대화 내용: ${messages.slice(-2).map(m => `${m.type === 'teacher' ? '선생님' : '학생'}: ${m.content}`).join('\n')}`
-            }]
-          }]
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const question = data.candidates?.[0]?.content?.parts?.[0]?.text || categoryQuestions[category || 'mathematics'][Math.min(questionCount + 1, categoryQuestions[category || 'mathematics'].length - 1)];
-        setStudentMood('thinking');
-        
-        setMessages(prev => [...prev, {
-          id: Date.now().toString(),
-          type: 'student',
-          content: question,
-          timestamp: new Date()
-        }]);
-      } else {
-        throw new Error('API 응답 실패');
-      }
-    } catch (error) {
-      console.error('Gemini API 오류:', error);
-      // Fallback to predefined questions
-      const questions = categoryQuestions[category || 'mathematics'] || categoryQuestions.mathematics;
-      const questionIndex = Math.min(questionCount + 1, questions.length - 1);
-      const followUpQuestion = questions[questionIndex];
-      setStudentMood('thinking');
-      
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        type: 'student',
-        content: followUpQuestion,
-        timestamp: new Date()
-      }]);
-    }
+    setIsLoading(false);
   };
 
   const handleFinishTeaching = () => {

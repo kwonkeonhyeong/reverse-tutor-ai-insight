@@ -1,4 +1,3 @@
-
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -218,6 +217,42 @@ ${conversationText}
                 총 {teachingData.messages.filter((m: any) => m.type === 'teacher').length}번의 설명을 분석했습니다
               </CardDescription>
             </CardHeader>
+          </Card>
+
+          {/* AI 학생을 교육한 대화 내역 */}
+          <Card className="border-gray-200 bg-white">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2 text-gray-800">
+                <Lightbulb className="w-5 h-5" />
+                AI 학생을 교육한 대화 내역
+              </CardTitle>
+              <CardDescription>
+                선생님(나)와 AI 학생이 주고받은 모든 대화 내역입니다
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {teachingData.messages.map((m: any, idx: number) => (
+                  <div
+                    key={idx}
+                    className={`flex ${m.type === 'teacher' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-xl p-3 rounded-lg ${
+                        m.type === 'teacher'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-100 text-gray-800 border'
+                      }`}
+                    >
+                      <div className="text-sm">{m.content}</div>
+                      <div className="text-xs mt-1 text-right opacity-60">
+                        {m.type === 'teacher' ? '선생님' : '학생'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
           </Card>
 
           <div className="grid md:grid-cols-2 gap-6">
