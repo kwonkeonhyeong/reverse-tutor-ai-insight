@@ -33,21 +33,12 @@ const StudentAnimation = ({ isListening, mood }: StudentAnimationProps) => {
     }
   }, [isListening]);
 
-  const getFaceColor = () => {
-    switch (mood) {
-      case 'excited': return 'text-yellow-400';
-      case 'thinking': return 'text-blue-400';
-      case 'confused': return 'text-orange-400';
-      default: return 'text-green-400';
-    }
-  };
-
   const getMouthShape = () => {
     switch (mood) {
-      case 'excited': return 'M8,12 Q12,8 16,12';
-      case 'thinking': return 'M8,12 L16,12';
-      case 'confused': return 'M8,12 Q12,16 16,12';
-      default: return 'M8,12 Q12,10 16,12';
+      case 'excited': return 'M40,65 Q50,75 60,65';
+      case 'thinking': return 'M40,68 L60,68';
+      case 'confused': return 'M40,70 Q50,60 60,70';
+      default: return 'M40,68 Q50,72 60,68';
     }
   };
 
@@ -55,72 +46,56 @@ const StudentAnimation = ({ isListening, mood }: StudentAnimationProps) => {
     <Card className="p-8 bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200">
       <div className="text-center">
         <div className="mb-6">
-          <div className={`inline-block p-6 rounded-full bg-white shadow-lg ${getFaceColor()}`}>
-            <svg width="180" height="180" viewBox="0 0 100 100" className="animate-pulse">
-              {/* Face outline */}
-              <circle cx="50" cy="50" r="40" fill="currentColor" fillOpacity="0.1" stroke="currentColor" strokeWidth="1" strokeOpacity="0.2" />
-              
+          <div className={`inline-block p-6 rounded-full bg-white shadow-lg`}>
+            <svg width="180" height="180" viewBox="0 0 100 100">
+              {/* Head */}
+              <circle cx="50" cy="50" r="40" fill="#f3e5f5" stroke="#ce93d8" strokeWidth="1"/>
+
               {/* Hair */}
-              <path d="M20 35 Q30 25, 50 25 Q70 25, 80 35 Q75 30, 50 20 Q25 30, 20 35" fill="currentColor" fillOpacity="0.6" />
-              
+              <path d="M30,40 C15,15 50,10 70,25 C65,15 50,5 35,15 Z" fill="#6d4c41" />
+
               {/* Eyes */}
-              <ellipse 
-                cx={35 + eyePosition.x} 
-                cy={40 + eyePosition.y} 
-                rx={blinkAnimation ? "1" : "3"} 
-                ry={blinkAnimation ? "0.5" : "2"} 
-                fill="currentColor"
-                className="transition-all duration-150"
-              />
-              <ellipse 
-                cx={65 + eyePosition.x} 
-                cy={40 + eyePosition.y} 
-                rx={blinkAnimation ? "1" : "3"} 
-                ry={blinkAnimation ? "0.5" : "2"} 
-                fill="currentColor"
-                className="transition-all duration-150"
-              />
-              
-              {/* Pupils */}
-              {!blinkAnimation && (
-                <>
-                  <circle cx={35 + eyePosition.x} cy={40 + eyePosition.y} r="1" fill="white" />
-                  <circle cx={65 + eyePosition.x} cy={40 + eyePosition.y} r="1" fill="white" />
-                </>
-              )}
-              
+              <g transform={`translate(${eyePosition.x}, ${eyePosition.y})`}>
+                {/* Left Eye */}
+                <ellipse cx="38" cy="45" rx="6" ry={blinkAnimation ? 0.5 : 5} fill="white" stroke="#6d4c41" strokeWidth="1"/>
+                <circle cx="38" cy="45" r="2.5" fill="#6d4c41" />
+                <circle cx="39" cy="44" r="1" fill="white" fillOpacity="0.8" />
+                
+                {/* Right Eye */}
+                <ellipse cx="62" cy="45" rx="6" ry={blinkAnimation ? 0.5 : 5} fill="white" stroke="#6d4c41" strokeWidth="1"/>
+                <circle cx="62" cy="45" r="2.5" fill="#6d4c41" />
+                <circle cx="63"cy="44" r="1" fill="white" fillOpacity="0.8" />
+              </g>
+
               {/* Nose */}
-              <ellipse cx="50" cy="50" rx="1" ry="2" fill="currentColor" fillOpacity="0.3" />
-              
+              <path d="M48,52 C50,56 52,56 50,52" stroke="#a1887f" strokeWidth="1.5" fill="none" />
+
               {/* Mouth */}
-              <path 
-                d={getMouthShape().replace(/8,12|12,8|16,12|12,16/g, (match) => {
-                  const coords = match.split(',');
-                  return `${parseInt(coords[0]) * 3 + 20},${parseInt(coords[1]) * 2 + 35}`;
-                })} 
-                stroke="currentColor" 
-                strokeWidth="2" 
+              <path
+                d={getMouthShape()}
+                stroke="#8d6e63"
+                strokeWidth="2"
+                strokeLinecap="round"
                 fill="none"
                 className="transition-all duration-300"
               />
-              
+
               {/* Cheeks when excited */}
               {mood === 'excited' && (
                 <>
-                  <circle cx="28" cy="55" r="3" fill="currentColor" fillOpacity="0.2" />
-                  <circle cx="72" cy="55" r="3" fill="currentColor" fillOpacity="0.2" />
+                  <circle cx="28" cy="55" r="5" fill="#ffcdd2" fillOpacity="0.7" />
+                  <circle cx="72" cy="55" r="5" fill="#ffcdd2" fillOpacity="0.7" />
                 </>
               )}
-              
+
               {/* Body/Shoulders */}
-              <ellipse cx="50" cy="90" rx="35" ry="15" fill="currentColor" fillOpacity="0.1" />
-              
+              <path d="M25,95 C30,80 70,80 75,95 L50,100 Z" fill="#e3f2fd" />
+
               {/* Listening indicator */}
               {isListening && (
                 <>
-                  <circle cx="15" cy="25" r="2" fill="currentColor" className="animate-ping" />
-                  <circle cx="85" cy="25" r="2" fill="currentColor" className="animate-ping" style={{ animationDelay: '0.2s' }} />
-                  <circle cx="50" cy="15" r="2" fill="currentColor" className="animate-ping" style={{ animationDelay: '0.4s' }} />
+                  <circle cx="15" cy="25" r="3" fill="#4fc3f7" className="animate-ping" />
+                  <circle cx="85" cy="25" r="3" fill="#4fc3f7" className="animate-ping" style={{ animationDelay: '0.2s' }} />
                 </>
               )}
             </svg>

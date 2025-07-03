@@ -1,14 +1,16 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Brain, User } from "lucide-react";
+import { Brain, User, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import CategorySelector from "@/components/CategorySelector";
+import { useAuth } from "@/contexts/AuthContext";
+import { AuthModal } from "@/components/auth/AuthModal";
 
 const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const navigate = useNavigate();
+  const { isLoggedIn, logout } = useAuth();
 
   const handleStartTeaching = () => {
     if (selectedCategory) {
@@ -31,14 +33,30 @@ const Index = () => {
                 <p className="text-gray-600">당신의 지식을 설명하고 AI 피드백을 받아보세요</p>
               </div>
             </div>
-            <Button
-              onClick={() => navigate('/mypage')}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <User className="w-4 h-4" />
-              마이페이지
-            </Button>
+            <div className="flex items-center gap-2">
+              {isLoggedIn ? (
+                <>
+                  <Button
+                    onClick={() => navigate('/mypage')}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <User className="w-4 h-4" />
+                    마이페이지
+                  </Button>
+                  <Button
+                    onClick={logout}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    로그아웃
+                  </Button>
+                </>
+              ) : (
+                <AuthModal />
+              )}
+            </div>
           </div>
         </div>
       </div>

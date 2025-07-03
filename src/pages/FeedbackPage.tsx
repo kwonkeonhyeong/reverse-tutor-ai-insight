@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,12 +21,20 @@ const FeedbackPage = () => {
   const teachingData = location.state?.teachingData;
   const [feedback, setFeedback] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const pdfRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (teachingData) {
       generateAIFeedback();
     }
   }, [teachingData]);
+
+  const handleDownloadPdf = () => {
+    if (pdfRef.current) {
+      const fileName = `교육피드백_${categoryNames[teachingData.category]}_${new Date().toISOString().split('T')[0]}.pdf`;
+      generateFeedbackPDF(pdfRef.current, fileName);
+    }
+  };
 
   const generateAIFeedback = async () => {
     const geminiApiKey = localStorage.getItem('geminiApiKey');
@@ -71,19 +79,7 @@ const FeedbackPage = () => {
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `다음은 ${categoryNames[teachingData.category]} 분야의 교육 세션입니다. 이 교육 내용을 분석하여 피드백을 제공해주세요.
-
-대화 내용:
-${conversationText}
-
-다음 형식으로 JSON 응답해주세요:
-{
-  "strengths": ["강점1", "강점2", "강점3"],
-  "improvements": ["개선점1", "개선점2", "개선점3"],
-  "suggestions": ["추천 학습 주제1", "추천 학습 주제2", "추천 학습 주제3"]
-}
-
-각 항목은 구체적이고 실용적인 조언으로 작성해주세요.`
+              text: `다음은 ${categoryNames[teachingData.category]} 분야의 교육 세션입니다. 이 교육 내용을 분석하여 피드백을 제공해주세요.\n\n대화 내용:\n${conversationText}\n\n다음 형식으로 JSON 응답해주세요:\n{\n  "strengths": ["강점1", "강점2", "강점3"],\n  "improvements": ["개선점1", "개선점2", "개선점3"],\n  "suggestions": ["추천 학습 주제1", "추천 학습 주제2", "추천 학습 주제3"]\n}\n\n각 항목은 구체적이고 실용적인 조언으로 작성해주세요.`
             }]
           }]
         })
@@ -203,7 +199,7 @@ ${conversationText}
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8" ref={pdfRef}>
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Overview */}
           <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-blue-200">
@@ -332,13 +328,7 @@ ${conversationText}
           {/* Action Buttons */}
           <div className="flex gap-4 justify-center pt-4">
             <Button 
-              onClick={() => generateFeedbackPDF({
-                category: teachingData.category,
-                strengths: feedback.strengths,
-                improvements: feedback.improvements,
-                suggestions: feedback.suggestions,
-                messages: teachingData.messages
-              })}
+              onClick={handleDownloadPdf}
               variant="outline"
               size="lg"
             >

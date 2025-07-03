@@ -1,0 +1,1 @@
+export const nanumGothic = 'AAEAAAARAQAABAAQRFNJRwAAAAAAA...'; // Base64 encoded font data

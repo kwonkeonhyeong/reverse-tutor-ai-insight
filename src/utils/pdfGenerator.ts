@@ -1,92 +1,38 @@
 import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
-interface FeedbackData {
-  category: string;
-  strengths: string[];
-  improvements: string[];
-  suggestions: string[];
-  messages: Array<{
-    type: 'teacher' | 'student';
-    content: string;
-    timestamp: Date;
-  }>;
-}
+export const generateFeedbackPDF = (element: HTMLElement, fileName: string) => {
+  html2canvas(element, {
+    useCORS: true,
+    scale: 2, // 고해상도 이미지 생성
+    backgroundColor: '#ffffff', // 배경색을 흰색으로 명시
+  }).then(canvas => {
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+    
+    const ratio = canvasWidth / canvasHeight;
+    const imgWidth = pdfWidth - 20; // 여백 고려
+    const imgHeight = imgWidth / ratio;
+    
+    let heightLeft = imgHeight;
+    let position = 10; // 상단 여백
 
-const categoryNames: { [key: string]: string } = {
-  mathematics: "수학",
-  science: "과학", 
-  history: "역사",
-  economics: "경제",
-  computer_science: "컴퓨터과학",
-  language: "언어"
-};
+    pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+    heightLeft -= (pdfHeight - 20);
 
-export const generateFeedbackPDF = (feedbackData: FeedbackData) => {
-  const pdf = new jsPDF();
-  
-  // Set font for Korean support (basic)
-  pdf.setFont('helvetica');
-  
-  let yPosition = 20;
-  const lineHeight = 10;
-  const pageHeight = pdf.internal.pageSize.height;
-  
-  const addText = (text: string, fontSize: number = 12, isBold: boolean = false) => {
-    if (yPosition > pageHeight - 20) {
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight + 10; // 다음 페이지 위치 조정
       pdf.addPage();
-      yPosition = 20;
+      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+      heightLeft -= (pdfHeight - 20);
     }
     
-    pdf.setFontSize(fontSize);
-    if (isBold) {
-      pdf.setFont('helvetica', 'bold');
-    } else {
-      pdf.setFont('helvetica', 'normal');
-    }
-    
-    const lines = pdf.splitTextToSize(text, 170);
-    lines.forEach((line: string) => {
-      pdf.text(line, 20, yPosition);
-      yPosition += lineHeight;
-    });
-    yPosition += 5;
-  };
-
-  // Title
-  addText('교육 피드백 보고서', 20, true);
-  addText(`과목: ${categoryNames[feedbackData.category]}`, 14, true);
-  addText(`생성일: ${new Date().toLocaleDateString('ko-KR')}`, 12);
-  yPosition += 10;
-
-  // Teaching conversation
-  addText('교육 대화 내역', 16, true);
-  feedbackData.messages.forEach((message, index) => {
-    const speaker = message.type === 'teacher' ? '선생님' : '학생';
-    addText(`${speaker}: ${message.content}`, 10);
+    pdf.save(fileName);
   });
-  yPosition += 10;
-
-  // Strengths
-  addText('잘하신 부분', 16, true);
-  feedbackData.strengths.forEach((strength, index) => {
-    addText(`${index + 1}. ${strength}`, 12);
-  });
-  yPosition += 10;
-
-  // Improvements
-  addText('개선할 부분', 16, true);
-  feedbackData.improvements.forEach((improvement, index) => {
-    addText(`${index + 1}. ${improvement}`, 12);
-  });
-  yPosition += 10;
-
-  // Suggestions
-  addText('다음 학습 단계', 16, true);
-  feedbackData.suggestions.forEach((suggestion, index) => {
-    addText(`${index + 1}. ${suggestion}`, 12);
-  });
-
-  // Save the PDF
-  const fileName = `교육피드백_${categoryNames[feedbackData.category]}_${new Date().toISOString().split('T')[0]}.pdf`;
-  pdf.save(fileName);
 };
