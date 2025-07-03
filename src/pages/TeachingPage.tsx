@@ -380,6 +380,14 @@ const TeachingPage = () => {
                       }
                       value={currentInput}
                       onChange={(e) => setCurrentInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          if (currentInput.trim() && !isLoading) {
+                            handleSendMessage();
+                          }
+                        }
+                      }}
                       className="min-h-[100px] pr-12"
                       disabled={isLoading}
                     />
@@ -403,6 +411,9 @@ const TeachingPage = () => {
                       </Button>
                     )}
                   </div>
+                  <p className="text-xs text-gray-500">
+                    줄바꿈 : shift + enter
+                  </p>
                   <div className="flex justify-end">
                     <Button
                       onClick={handleSendMessage}
