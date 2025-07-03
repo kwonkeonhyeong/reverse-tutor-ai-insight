@@ -5,7 +5,11 @@ export const useGeminiAPI = (geminiApiKey: string) => {
   const [isGettingFeedback, setIsGettingFeedback] = useState(false);
 
   const getAiFeedback = async (content: string) => {
-    if (!geminiApiKey) return;
+    if (!geminiApiKey) {
+      console.log('AI 피드백: API 키가 없습니다');
+      return;
+    }
+    console.log('AI 피드백 요청 시작:', content);
     setIsGettingFeedback(true);
     try {
       const prompt = `아래의 설명에 대해 논리적, 사실적 오류가 있다면 지적해주고, 개선점을 50자 이내로 알려주세요.\n설명: "${content}"`;
@@ -16,14 +20,18 @@ export const useGeminiAPI = (geminiApiKey: string) => {
           contents: [{ parts: [{ text: prompt }] }]
         })
       });
+      console.log('AI 피드백 응답 상태:', response.status);
       if (response.ok) {
         const data = await response.json();
         const feedback = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        console.log('AI 피드백 결과:', feedback);
         setAiFeedback(feedback);
       } else {
+        console.error('AI 피드백 오류:', await response.text());
         setAiFeedback('피드백을 가져올 수 없습니다.');
       }
     } catch (error) {
+      console.error('AI 피드백 예외:', error);
       setAiFeedback('피드백을 가져올 수 없습니다.');
     } finally {
       setIsGettingFeedback(false);

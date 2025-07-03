@@ -3,7 +3,8 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Lightbulb, ArrowRight, Home, BookOpen } from "lucide-react";
+import { CheckCircle, XCircle, Lightbulb, ArrowRight, Home, BookOpen, Download } from "lucide-react";
+import { generateFeedbackPDF } from "@/utils/pdfGenerator";
 
 const categoryNames: { [key: string]: string } = {
   mathematics: "수학",
@@ -330,6 +331,20 @@ ${conversationText}
 
           {/* Action Buttons */}
           <div className="flex gap-4 justify-center pt-4">
+            <Button 
+              onClick={() => generateFeedbackPDF({
+                category: teachingData.category,
+                strengths: feedback.strengths,
+                improvements: feedback.improvements,
+                suggestions: feedback.suggestions,
+                messages: teachingData.messages
+              })}
+              variant="outline"
+              size="lg"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              PDF 다운로드
+            </Button>
             <Button 
               onClick={() => navigate('/')}
               variant="outline"
